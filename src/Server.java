@@ -19,11 +19,11 @@ public class Server {
 
     public static void main(String[] args) throws Exception {
         ServerSocket serverSocket = new ServerSocket(8000);
-        System.out.println("Server: Waiting for client connection...");
+        System.out.println("Waiting for client connection...");
 
         // Wait for client connection
         Socket socket = serverSocket.accept();
-        System.out.println("Server: Client connected.");
+        System.out.println("Client connected.");
 
         // RSA key pair generation
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance(RSA);
@@ -64,22 +64,34 @@ public class Server {
         Scanner scanner = new Scanner(System.in);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         String message;
-        while (true) {
-            // Receive encrypted message
-            String encryptedMessage = (String) ois.readObject();
-            String decryptedMessage = decrypt(encryptedMessage, aesKey, ivParameterSpec);
-            System.out.println("\n> Received : " + decryptedMessage + "  [" + dateFormat.format(new Date()) + "]");
-            System.out.println("Encrypted message: " + encryptedMessage);
+        try {
+            while (true) {
+                // Receive encrypted message
+                String encryptedMessage = (String) ois.readObject();
+                String decryptedMessage = decrypt(encryptedMessage, aesKey, ivParameterSpec);
 
-            System.out.print("\n> Enter message : ");
-            message = scanner.nextLine();
-            if (message.equalsIgnoreCase("exit")) {
-                break;
+                // Exit if either side types "exit"
+                if (decryptedMessage.equalsIgnoreCase("exit")) {
+                    System.out.println("\n> Received : " + decryptedMessage + "  [" + dateFormat.format(new Date()) + "]");
+                    System.out.println("Encrypted message: " + encryptedMessage);
+                    break;
+                }
+                System.out.println("\n> Received : " + decryptedMessage + "  [" + dateFormat.format(new Date()) + "]");
+                System.out.println("Encrypted message: " + encryptedMessage);
+
+                System.out.print("\n> Enter message : ");
+                message = scanner.nextLine();
+                // Exit if user types "exit"
+                if (message.equalsIgnoreCase("exit")) {
+                    oos.writeObject(encrypt("exit", aesKey, ivParameterSpec));
+                    break;
+                }
+                String encryptedReply = encrypt(message, aesKey, ivParameterSpec);
+                oos.writeObject(encryptedReply);
             }
-            String encryptedReply = encrypt(message, aesKey, ivParameterSpec);
-            oos.writeObject(encryptedReply);
+        } catch (Exception e) {
+            System.out.println("Connection closed.");
         }
-
         ois.close();
         oos.close();
         socket.close();

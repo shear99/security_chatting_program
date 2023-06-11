@@ -18,7 +18,7 @@ public class Client {
 
     public static void main(String[] args) throws Exception {
         Socket socket = new Socket("localhost", 8000);
-        System.out.println("Connected to server.");
+        System.out.println("Server connected.");
 
         // AES key generation
         KeyGenerator keyGenerator = KeyGenerator.getInstance(AES);
@@ -54,20 +54,32 @@ public class Client {
         Scanner scanner = new Scanner(System.in);
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         String message;
+        try {
         while (true) {
             System.out.print("\n> Enter message : ");
             message = scanner.nextLine();
+            // Exit if user types "exit"
             if (message.equalsIgnoreCase("exit")) {
+                oos.writeObject(encrypt("exit", aesKey, new IvParameterSpec(iv)));
                 break;
             }
             String encryptedMessage = encrypt(message, aesKey, new IvParameterSpec(iv));
             oos.writeObject(encryptedMessage);
-
             // Receive encrypted reply
             String encryptedReply = (String) ois.readObject();
             String decryptedReply = decrypt(encryptedReply, aesKey, new IvParameterSpec(iv));
+
+            // Exit if either side types "exit"
+            if (decryptedReply.equalsIgnoreCase("exit")) {
+                System.out.println("\n> Received : " + decryptedReply + "  [" + dateFormat.format(new Date()) + "]");
+                System.out.println("Encrypted message: " + encryptedMessage);
+                break;
+            }
             System.out.println("\n> Received : " + decryptedReply + "  [" + dateFormat.format(new Date()) + "]");
             System.out.println("Encrypted message: " + encryptedMessage);
+        }
+        } catch (Exception e) {
+            System.out.println("Connection closed.");
         }
         ois.close();
         oos.close();
