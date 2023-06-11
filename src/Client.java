@@ -14,6 +14,7 @@ public class Client {
     private static final int AES_KEY_SIZE = 256;
     private static final String AES = "AES";
     private static final String RSA = "RSA";
+    private static final String AES_TRANSFORMATION = "AES/CBC/PKCS5Padding";
 
     public static void main(String[] args) throws Exception {
         Socket socket = new Socket("localhost", 8000);
@@ -54,21 +55,20 @@ public class Client {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
         String message;
         while (true) {
-            System.out.print("\nEnter message (exit to quit): ");
+            System.out.print("\n> Enter message : ");
             message = scanner.nextLine();
             if (message.equalsIgnoreCase("exit")) {
                 break;
             }
-            String encryptedMessage = encrypt(message);
+            String encryptedMessage = encrypt(message, aesKey, new IvParameterSpec(iv));
             oos.writeObject(encryptedMessage);
 
             // Receive encrypted reply
             String encryptedReply = (String) ois.readObject();
-            String decryptedReply = decrypt(encryptedReply);
-            System.out.println("Server: " + decryptedReply + "  [" + dateFormat.format(new Date()) + "]");
+            String decryptedReply = decrypt(encryptedReply, aesKey, new IvParameterSpec(iv));
+            System.out.println("\n> Received : " + decryptedReply + "  [" + dateFormat.format(new Date()) + "]");
             System.out.println("Encrypted message: " + encryptedMessage);
         }
-
         ois.close();
         oos.close();
         socket.close();
@@ -81,16 +81,16 @@ public class Client {
         return iv;
     }
 
-    public static String encrypt(String strToEncrypt) throws Exception {
-        Cipher cipher = Cipher.getInstance(AES);
-        cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+    public static String encrypt(String strToEncrypt, SecretKey key, IvParameterSpec iv) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
         byte[] encryptedBytes = cipher.doFinal(strToEncrypt.getBytes("UTF-8"));
         return Base64.getEncoder().encodeToString(encryptedBytes);
     }
 
-    public static String decrypt(String strToDecrypt) throws Exception {
-        Cipher cipher = Cipher.getInstance(AES);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey);
+    public static String decrypt(String strToDecrypt, SecretKey key, IvParameterSpec iv) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
         byte[] decodedBytes = Base64.getDecoder().decode(strToDecrypt);
         byte[] decryptedBytes = cipher.doFinal(decodedBytes);
         return new String(decryptedBytes, "UTF-8");

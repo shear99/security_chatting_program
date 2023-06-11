@@ -15,6 +15,7 @@ public class Server {
     private static final int AES_KEY_SIZE = 256;
     private static final String AES = "AES";
     private static final String RSA = "RSA";
+    private static final String AES_TRANSFORMATION = "AES/CBC/PKCS5Padding";
 
     public static void main(String[] args) throws Exception {
         ServerSocket serverSocket = new ServerSocket(8000);
@@ -66,16 +67,16 @@ public class Server {
         while (true) {
             // Receive encrypted message
             String encryptedMessage = (String) ois.readObject();
-            String decryptedMessage = decrypt(encryptedMessage);
-            System.out.println("Client: " + decryptedMessage + "  [" + dateFormat.format(new Date()) + "]");
+            String decryptedMessage = decrypt(encryptedMessage, aesKey, ivParameterSpec);
+            System.out.println("\n> Received : " + decryptedMessage + "  [" + dateFormat.format(new Date()) + "]");
             System.out.println("Encrypted message: " + encryptedMessage);
 
-            System.out.print("\nEnter message (exit to quit): ");
+            System.out.print("\n> Enter message : ");
             message = scanner.nextLine();
             if (message.equalsIgnoreCase("exit")) {
                 break;
             }
-            String encryptedReply = encrypt(message);
+            String encryptedReply = encrypt(message, aesKey, ivParameterSpec);
             oos.writeObject(encryptedReply);
         }
 
@@ -85,16 +86,16 @@ public class Server {
         serverSocket.close();
     }
 
-    public static String encrypt(String strToEncrypt) throws Exception {
-        Cipher cipher = Cipher.getInstance(AES);
-        cipher.init(Cipher.ENCRYPT_MODE, aesKey);
+    public static String encrypt(String strToEncrypt, SecretKey key, IvParameterSpec iv) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        cipher.init(Cipher.ENCRYPT_MODE, key, iv);
         byte[] encryptedBytes = cipher.doFinal(strToEncrypt.getBytes("UTF-8"));
         return Base64.getEncoder().encodeToString(encryptedBytes);
     }
 
-    public static String decrypt(String strToDecrypt) throws Exception {
-        Cipher cipher = Cipher.getInstance(AES);
-        cipher.init(Cipher.DECRYPT_MODE, aesKey);
+    public static String decrypt(String strToDecrypt, SecretKey key, IvParameterSpec iv) throws Exception {
+        Cipher cipher = Cipher.getInstance(AES_TRANSFORMATION);
+        cipher.init(Cipher.DECRYPT_MODE, key, iv);
         byte[] decodedBytes = Base64.getDecoder().decode(strToDecrypt);
         byte[] decryptedBytes = cipher.doFinal(decodedBytes);
         return new String(decryptedBytes, "UTF-8");
